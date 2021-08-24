@@ -1,5 +1,4 @@
 #include "ThreadPool.h"
-#include <pthread.h>
 
 namespace threadpool {
 
@@ -12,7 +11,11 @@ CPool::CPool() {
     p_threads = nullptr;
 }
 
-CPool::~CPool() {}
+CPool::~CPool() {
+    if (p_threads == nullptr) {
+        Destroy();
+    }
+}
 
 #if defined(WIN32)
 unsigned int threadinit(void *arg) {
@@ -56,6 +59,7 @@ bool CPool::Destroy() {
     p_mtx.Unlock();
 
     delete[] p_threads;
+    p_threads = nullptr;
 
     return true;
 }
