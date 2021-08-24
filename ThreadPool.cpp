@@ -76,14 +76,25 @@ void CPool::Loop(void *arg) {
     _THREAD *thread = static_cast<_THREAD*>(arg);
 
     while (thread->run) {
+#if defined(linux)
+        p_mtx.Lock();
+#endif
         while (p_taskque.size() == 0) {
             if (!thread->run) { break; }
             p_cond.Wait(10, p_mtx._mtx);
         }
 
-        if (!thread->run) { break; }
+        if (!thread->run) {
+#if defined(linux)
+            p_mtx.Unlock();
+#endif
+            break;
+        }
 
+#if defined(WIN32)
         p_mtx.Lock();
+#endif
+
         CTask *task = p_taskque.front();
         p_taskque.pop();
 
