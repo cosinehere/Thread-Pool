@@ -15,4 +15,6 @@ add_executable(test
     ${CMAKE_SOURCE_DIR}/ThreadPool.cpp
     ${CMAKE_SOURCE_DIR}/test.cpp)
 
+if (LINUX)
 target_link_libraries(test pthread)
+endif ()

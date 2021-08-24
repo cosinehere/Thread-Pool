@@ -1,5 +1,4 @@
 #include "ThreadPool.h"
-#include <pthread.h>
 
 namespace threadpool {
 
@@ -18,11 +17,15 @@ CPool::~CPool() {
     }
 }
 
+#if defined(WIN32)
+unsigned int threadinit(void *arg) {
+#elif defined(linux)
 void *threadinit(void *arg) {
+#endif
     _THREAD *thread = static_cast<_THREAD*>(arg);
     thread->pool->Loop(arg);
 
-    return nullptr;
+    return 0;
 }
 
 bool CPool::Create(int threadnum) {
@@ -35,7 +38,11 @@ bool CPool::Create(int threadnum) {
     for (int i = 0; i < threadnum; ++i) {
         p_threads[i].run = true;
         p_threads[i].pool = this;
+#if defined(WIN32)
+        p_threads[i].thread = (HANDLE)_beginthreadex(nullptr, 0, threadinit, &p_threads[i], 0, nullptr);
+#elif defined(linux)
         pthread_create(&p_threads[i].thread, nullptr, threadinit, &p_threads[i]);
+#endif
     }
 
     return true;
@@ -51,6 +58,7 @@ bool CPool::Destroy() {
     p_mtx.Unlock();
 
     delete[] p_threads;
+    p_threads = nullptr;
 
     return true;
 }

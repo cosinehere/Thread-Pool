@@ -5,7 +5,10 @@
 
 #include <queue>
 
-#ifdef linux
+#if defined(WIN32)
+#include <windows.h>
+#include <process.h>
+#elif defined(linux)
 #include <pthread.h>
 #endif
 
@@ -23,11 +26,39 @@ public:
 class CPool;
 
 struct _THREAD {
+#if defined(WIN32)
+    HANDLE thread;
+#elif defined(linux)
     pthread_t thread;
+#endif
     bool run;
     CPool *pool;
 };
 
+#if defined(WIN32)
+class CPoolMutex {
+public:
+    CPoolMutex() { InitializeCriticalSection(&_mtx); }
+    ~CPoolMutex() { DeleteCriticalSection(&_mtx); }
+    void Lock() { EnterCriticalSection(&_mtx); }
+    void Unlock() { LeaveCriticalSection(&_mtx); }
+
+public:
+    CRITICAL_SECTION _mtx;
+};
+
+class CPoolCond {
+public:
+    CPoolCond() { InitializeConditionVariable(&_cond); }
+    ~CPoolCond() {  }
+
+    void Wait(CPoolMutex &mtx) { SleepConditionVariableCS(&_cond, &mtx._mtx, INFINITE); }
+    void Notify() { WakeConditionVariable(&_cond); }
+    void NotifyAll() { WakeAllConditionVariable(&_cond); }
+public:
+    CONDITION_VARIABLE _cond;
+};
+#elif defined(linux)
 class CPoolMutex {
     public:
         CPoolMutex() { pthread_mutex_init(&_mtx, nullptr); }
@@ -50,6 +81,7 @@ class CPoolCond {
     public:
         pthread_cond_t _cond;
 };
+#endif
 
 class CPool {
 public:
