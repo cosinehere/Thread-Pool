@@ -42,7 +42,6 @@ bool CPool::Create(int threadnum) {
         p_threads[i].thread = (HANDLE)_beginthreadex(nullptr, 0, threadinit, &p_threads[i], 0, nullptr);
 #elif defined(linux)
         pthread_create(&p_threads[i].thread, nullptr, threadinit, &p_threads[i]);
-        pthread_detach(p_threads[i].thread);
 #endif
     }
 
@@ -54,9 +53,17 @@ bool CPool::Destroy() {
 
     for (int i = 0; i < p_threadnum; ++i) { p_threads[i].run = false; }
 
-    p_mtx.Lock();
     p_cond.NotifyAll();
-    p_mtx.Unlock();
+
+    for (int i = 0; i < p_threadnum; ++i) {
+        p_threads[i].run = false;
+        p_cond.NotifyAll();
+#if defined(WIN32)
+        WaitForSingleObject(p_threads[i].thread, INFINITE);
+#elif defined(linux)
+        pthread_join(p_threads[i].thread, nullptr);
+#endif
+    }
 
     delete[] p_threads;
     p_threads = nullptr;
@@ -64,7 +71,7 @@ bool CPool::Destroy() {
     return true;
 }
 
-bool CPool::PushTask(CTask *task){
+bool CPool::PushTask(CTask *task) {
     if (task == nullptr) { return false; }
 
     p_mtx.Lock();
@@ -84,7 +91,7 @@ void CPool::Loop(void *arg) {
         p_mtx.Lock();
         while (p_taskque.size() == 0) {
             if (!thread->run) { break; }
-            p_cond.Wait(p_mtx);
+            p_cond.Wait(10, p_mtx._mtx);
         }
 
         if (!thread->run) {
@@ -94,7 +101,7 @@ void CPool::Loop(void *arg) {
 
         CTask *task = p_taskque.front();
         p_taskque.pop();
-        
+
         p_mtx.Unlock();
 
         task->run();

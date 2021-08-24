@@ -14,6 +14,36 @@
 
 namespace threadpool {
 
+#if defined(WIN32)
+typedef HANDLE MutexType;
+#define INITIAL_MUTEX(mtx) mtx = CreateMutex(NULL, FALSE, NULL)
+#define LOCK_MUTEX(mtx) WaitForSingleObject(mtx, INFINITE)
+#define UNLOCK_MUTEX(mtx) ReleaseMutex(mtx)
+#define DELETE_MUTEX(mtx) CloseHandle(mtx)
+
+typedef HANDLE ConditionType;
+#define INITIAL_COND(cond) cond = CreateEvent(NULL, FALSE, FALSE, NULL)
+#define WAIT_COND(cond, timeout, mtx) WaitForSingleObject(cond, timeout)
+#define SIGNAL_COND(cond) SetEvent(cond)
+#define BROADCAST_COND(cond) SetEvent(cond)
+#define DELETE_COND(cond) CloseHandle(cond)
+
+#elif defined(linux)
+typedef pthread_mutex_t MutexType;
+#define INITIAL_MUTEX(mtx) pthread_mutex_init(&mtx, nullptr)
+#define LOCK_MUTEX(mtx) pthread_mutex_lock(&mtx)
+#define UNLOCK_MUTEX(mtx) pthread_mutex_unlock(&mtx)
+#define DELETE_MUTEX(mtx) pthread_mutex_destroy(&mtx)
+
+typedef pthread_cond_t ConditionType;
+#define INITIAL_COND(cond) pthread_cond_init(&cond, nullptr)
+#define WAIT_COND(cond, timeout, mtx) pthread_cond_wait(&cond, &mtx)
+#define SIGNAL_COND(cond) pthread_cond_signal(&cond)
+#define BROADCAST_COND(cond) pthread_cond_broadcast(&cond)
+#define DELETE_COND(cond) pthread_cond_destroy(&cond)
+
+#endif
+
 using std::queue;
 
 class CTask {
@@ -35,53 +65,29 @@ struct _THREAD {
     CPool *pool;
 };
 
-#if defined(WIN32)
 class CPoolMutex {
 public:
-    CPoolMutex() { InitializeCriticalSection(&_mtx); }
-    ~CPoolMutex() { DeleteCriticalSection(&_mtx); }
-    void Lock() { EnterCriticalSection(&_mtx); }
-    void Unlock() { LeaveCriticalSection(&_mtx); }
+    CPoolMutex() { INITIAL_MUTEX(_mtx); }
+    ~CPoolMutex() { DELETE_MUTEX(_mtx); }
+    void Lock() { LOCK_MUTEX(_mtx); }
+    void Unlock() { UNLOCK_MUTEX(_mtx); }
 
 public:
-    CRITICAL_SECTION _mtx;
+    MutexType _mtx;
 };
 
 class CPoolCond {
 public:
-    CPoolCond() { InitializeConditionVariable(&_cond); }
-    ~CPoolCond() {  }
+    CPoolCond() { INITIAL_COND(_cond); }
+    ~CPoolCond() { DELETE_COND(_cond); }
 
-    void Wait(CPoolMutex &mtx) { SleepConditionVariableCS(&_cond, &mtx._mtx, INFINITE); }
-    void Notify() { WakeConditionVariable(&_cond); }
-    void NotifyAll() { WakeAllConditionVariable(&_cond); }
+    void Wait(int timeout, MutexType &mtx) { WAIT_COND(_cond, timeout, mtx); }
+
+    void Notify() { SIGNAL_COND(_cond); }
+    void NotifyAll() { BROADCAST_COND(_cond); }
 public:
-    CONDITION_VARIABLE _cond;
+    ConditionType _cond;
 };
-#elif defined(linux)
-class CPoolMutex {
-    public:
-        CPoolMutex() { pthread_mutex_init(&_mtx, nullptr); }
-        ~CPoolMutex() { pthread_mutex_destroy(&_mtx); }
-        void Lock() { pthread_mutex_lock(&_mtx); }
-        void Unlock() { pthread_mutex_unlock(&_mtx); }
-
-    public:
-        pthread_mutex_t _mtx;
-};
-
-class CPoolCond {
-    public:
-        CPoolCond() { pthread_cond_init(&_cond, nullptr); }
-        ~CPoolCond() { pthread_cond_destroy(&_cond); }
-
-        void Wait(CPoolMutex &mtx) { pthread_cond_wait(&_cond, &mtx._mtx); }
-        void Notify() { pthread_cond_signal(&_cond); }
-        void NotifyAll() { pthread_cond_broadcast(&_cond); }
-    public:
-        pthread_cond_t _cond;
-};
-#endif
 
 class CPool {
 public:
