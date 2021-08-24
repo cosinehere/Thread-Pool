@@ -15,6 +15,6 @@ add_executable(test
     ${CMAKE_SOURCE_DIR}/ThreadPool.cpp
     ${CMAKE_SOURCE_DIR}/test.cpp)
 
-if (LINUX)
-target_link_libraries(test pthread)
-endif ()
+if(CMAKE_SYSTEM_NAME MATCHES Linux)
+    target_link_libraries(test pthread)
+endif()

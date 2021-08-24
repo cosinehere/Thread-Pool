@@ -1,4 +1,5 @@
 #include "ThreadPool.h"
+#include <pthread.h>
 
 namespace threadpool {
 
@@ -58,7 +59,6 @@ bool CPool::Destroy() {
     p_mtx.Unlock();
 
     delete[] p_threads;
-    p_threads = nullptr;
 
     return true;
 }
