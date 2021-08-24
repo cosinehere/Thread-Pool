@@ -19,9 +19,9 @@ class CTest : public CTask {
 int main() {
 
     CPool pool;
-    pool.Create(4);
+    pool.Create(16);
 
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 2000; ++i) {
         pool.PushTask(new CTest(i));
     }
 

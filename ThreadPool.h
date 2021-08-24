@@ -15,6 +15,13 @@
 namespace threadpool {
 
 #if defined(WIN32)
+typedef HANDLE ThreadType;
+#define CREATE_THREAD(thread, fn, arg) thread = (HANDLE)_beginthread(fn, 0, arg)
+#define EXIT_THREAD(thread) _endthread()
+#define JOIN_THREAD(thread) WaitForSingleObject(thread, INFINITE)
+#define TYPE_THREAD void
+#define RETURN_THREAD return
+
 typedef HANDLE MutexType;
 #define INITIAL_MUTEX(mtx) mtx = CreateMutex(NULL, FALSE, NULL)
 #define LOCK_MUTEX(mtx) WaitForSingleObject(mtx, INFINITE)
@@ -29,6 +36,13 @@ typedef HANDLE ConditionType;
 #define DELETE_COND(cond) CloseHandle(cond)
 
 #elif defined(linux)
+typedef pthread_t ThreadType;
+#define CREATE_THREAD(thread, fn, arg) pthread_create(&thread, nullptr, fn, arg)
+#define EXIT_THREAD(thread) pthread_exit(nullptr)
+#define JOIN_THREAD(thread) pthread_join(thread, nullptr)
+#define TYPE_THREAD void *
+#define RETURN_THREAD return nullptr
+
 typedef pthread_mutex_t MutexType;
 #define INITIAL_MUTEX(mtx) pthread_mutex_init(&mtx, nullptr)
 #define LOCK_MUTEX(mtx) pthread_mutex_lock(&mtx)
@@ -56,11 +70,7 @@ public:
 class CPool;
 
 struct _THREAD {
-#if defined(WIN32)
-    HANDLE thread;
-#elif defined(linux)
-    pthread_t thread;
-#endif
+    ThreadType thread;
     bool run;
     CPool *pool;
 };
