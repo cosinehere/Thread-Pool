@@ -1,4 +1,5 @@
 #include "ThreadPool.h"
+#include <pthread.h>
 
 namespace threadpool {
 
@@ -38,6 +39,7 @@ bool CPool::Create(int threadnum) {
         p_threads[i].thread = (HANDLE)_beginthreadex(nullptr, 0, threadinit, &p_threads[i], 0, nullptr);
 #elif defined(linux)
         pthread_create(&p_threads[i].thread, nullptr, threadinit, &p_threads[i]);
+        pthread_detach(p_threads[i].thread);
 #endif
     }
 
