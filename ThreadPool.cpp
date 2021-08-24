@@ -47,8 +47,6 @@ bool CPool::Destroy() {
 
     p_run = false;
 
-    //p_cond.NotifyAll();
-
     for (int i = 0; i < p_threadnum; ++i) {
         p_cond.NotifyAll();
         JOIN_THREAD(p_threads[i].thread);
@@ -74,8 +72,6 @@ bool CPool::PushTask(CTask *task) {
 }
 
 void CPool::Loop(void *arg) {
-    _THREAD *thread = static_cast<_THREAD*>(arg);
-
     while (p_run) {
         p_mtx.Lock();
         while (p_taskque.size() == 0) {
