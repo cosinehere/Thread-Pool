@@ -7,6 +7,7 @@ CPool::CPool() {
         p_taskque.pop();
     }
 
+    p_run = false;
     p_threadnum = 0;
     p_threads = nullptr;
 }
@@ -31,8 +32,9 @@ bool CPool::Create(int threadnum) {
 
     p_threads = new _THREAD[threadnum];
 
+    p_run = true;
+
     for (int i = 0; i < threadnum; ++i) {
-        p_threads[i].run = true;
         p_threads[i].pool = this;
         CREATE_THREAD(p_threads[i].thread, threadinit, &p_threads[i]);
     }
@@ -43,12 +45,11 @@ bool CPool::Create(int threadnum) {
 bool CPool::Destroy() {
     if (p_threads == nullptr) { return false; }
 
-    for (int i = 0; i < p_threadnum; ++i) { p_threads[i].run = false; }
+    p_run = false;
 
-    p_cond.NotifyAll();
+    //p_cond.NotifyAll();
 
     for (int i = 0; i < p_threadnum; ++i) {
-        p_threads[i].run = false;
         p_cond.NotifyAll();
         JOIN_THREAD(p_threads[i].thread);
     }
@@ -75,14 +76,14 @@ bool CPool::PushTask(CTask *task) {
 void CPool::Loop(void *arg) {
     _THREAD *thread = static_cast<_THREAD*>(arg);
 
-    while (thread->run) {
+    while (p_run) {
         p_mtx.Lock();
         while (p_taskque.size() == 0) {
-            if (!thread->run) { break; }
+            if (!p_run) { break; }
             p_cond.Wait(10, p_mtx._mtx);
         }
 
-        if (!thread->run) {
+        if (!p_run) {
             p_mtx.Unlock();
             break;
         }

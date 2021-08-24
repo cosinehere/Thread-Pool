@@ -71,7 +71,6 @@ class CPool;
 
 struct _THREAD {
     ThreadType thread;
-    bool run;
     CPool *pool;
 };
 
