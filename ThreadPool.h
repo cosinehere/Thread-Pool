@@ -21,12 +21,13 @@ typedef HANDLE ThreadType;
 #define JOIN_THREAD(thread) WaitForSingleObject(thread, INFINITE)
 #define TYPE_THREAD void
 #define RETURN_THREAD return
+#define DELETE_THREAD(thread) CloseHandle(thread)
 
-typedef HANDLE MutexType;
-#define INITIAL_MUTEX(mtx) mtx = CreateMutex(NULL, FALSE, NULL)
-#define LOCK_MUTEX(mtx) WaitForSingleObject(mtx, INFINITE)
-#define UNLOCK_MUTEX(mtx) ReleaseMutex(mtx)
-#define DELETE_MUTEX(mtx) CloseHandle(mtx)
+typedef CRITICAL_SECTION MutexType;//HANDLE MutexType;
+#define INITIAL_MUTEX(mtx) InitializeCriticalSection(&mtx) //mtx = CreateMutex(NULL, FALSE, NULL)
+#define LOCK_MUTEX(mtx) EnterCriticalSection(&mtx) //WaitForSingleObject(mtx, INFINITE)
+#define UNLOCK_MUTEX(mtx) LeaveCriticalSection(&mtx) //ReleaseMutex(mtx)
+#define DELETE_MUTEX(mtx) DeleteCriticalSection(&mtx) //CloseHandle(mtx)
 
 typedef HANDLE ConditionType;
 #define INITIAL_COND(cond) cond = CreateEvent(NULL, FALSE, FALSE, NULL)
@@ -42,6 +43,7 @@ typedef pthread_t ThreadType;
 #define JOIN_THREAD(thread) pthread_join(thread, nullptr)
 #define TYPE_THREAD void *
 #define RETURN_THREAD return nullptr
+#define DELETE_THREAD(thread)
 
 typedef pthread_mutex_t MutexType;
 #define INITIAL_MUTEX(mtx) pthread_mutex_init(&mtx, nullptr)
@@ -108,7 +110,7 @@ public:
 
     bool PushTask(CTask *task);
 
-    void Loop(void *arg);
+    void Loop();
 
 private:
     bool p_run;

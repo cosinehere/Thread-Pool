@@ -20,7 +20,7 @@ CPool::~CPool() {
 
 TYPE_THREAD threadinit(void *arg) {
     _THREAD *thread = static_cast<_THREAD*>(arg);
-    thread->pool->Loop(arg);
+    thread->pool->Loop();
 
     RETURN_THREAD;
 }
@@ -50,6 +50,7 @@ bool CPool::Destroy() {
     for (int i = 0; i < p_threadnum; ++i) {
         p_cond.NotifyAll();
         JOIN_THREAD(p_threads[i].thread);
+        DELETE_THREAD(p_threads[i].thread);
     }
 
     delete[] p_threads;
@@ -71,12 +72,17 @@ bool CPool::PushTask(CTask *task) {
     return true;
 }
 
-void CPool::Loop(void *arg) {
+void CPool::Loop() {
     while (p_run) {
         p_mtx.Lock();
-        while (p_taskque.size() == 0) {
-            if (!p_run) { break; }
+        while (p_run && p_taskque.size() == 0) {
+#if defined(WIN32)
+            p_mtx.Unlock();
+#endif
             p_cond.Wait(10, p_mtx._mtx);
+#if defined(WIN32)
+            p_mtx.Lock();
+#endif
         }
 
         if (!p_run) {
