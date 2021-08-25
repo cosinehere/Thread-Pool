@@ -22,6 +22,7 @@ TYPE_THREAD threadinit(void *arg) {
     _THREAD *thread = static_cast<_THREAD*>(arg);
     thread->pool->Loop();
 
+    EXIT_THREAD;
     RETURN_THREAD;
 }
 

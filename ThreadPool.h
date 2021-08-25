@@ -16,11 +16,11 @@ namespace threadpool {
 
 #if defined(WIN32)
 typedef HANDLE ThreadType;
-#define CREATE_THREAD(thread, fn, arg) thread = (HANDLE)_beginthread(fn, 0, arg)
-#define EXIT_THREAD(thread) _endthread()
+#define CREATE_THREAD(thread, fn, arg) thread = (HANDLE)_beginthreadex(NULL, 0, fn, arg, 0, NULL)
+#define EXIT_THREAD _endthreadex(0)
 #define JOIN_THREAD(thread) WaitForSingleObject(thread, INFINITE)
-#define TYPE_THREAD void
-#define RETURN_THREAD return
+#define TYPE_THREAD unsigned int
+#define RETURN_THREAD return 0
 #define DELETE_THREAD(thread) CloseHandle(thread)
 
 typedef CRITICAL_SECTION MutexType;//HANDLE MutexType;
@@ -39,7 +39,7 @@ typedef HANDLE ConditionType;
 #elif defined(linux)
 typedef pthread_t ThreadType;
 #define CREATE_THREAD(thread, fn, arg) pthread_create(&thread, nullptr, fn, arg)
-#define EXIT_THREAD(thread) pthread_exit(nullptr)
+#define EXIT_THREAD pthread_exit(nullptr)
 #define JOIN_THREAD(thread) pthread_join(thread, nullptr)
 #define TYPE_THREAD void *
 #define RETURN_THREAD return nullptr
