@@ -436,6 +436,7 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 out
+build
 
 # clangd
 .clangd
